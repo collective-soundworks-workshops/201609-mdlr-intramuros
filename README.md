@@ -1,6 +1,6 @@
-# Soundworks Cordova Application Template
+# Soundworks Maison de la radio - pjt1
 
-> This is a project template for developing [*Soundworks*](https://github.com/collective-soundworks/soundworks/) applications as iOS or Android apps via the [Cordova](https://cordova.apache.org/) framework.  
+> Part of the Maison de la radio project (workshop Cosima October 2016): A Proxomix like experience with ambisonic soundscapes. 
 > See the [master branch](https://github.com/collective-soundworks/soundworks-template) for detail on how to use the Soundworks framework.
 
 ## Creating a New Soundworks Experience
@@ -10,3 +10,6 @@ see [MASTER README](https://github.com/collective-soundworks/soundworks-template
 ## Build Cordova application
 
 see apps/README
+
+
+
