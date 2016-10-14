@@ -5,6 +5,11 @@ import PlayerExperience from './PlayerExperience.js';
 import viewTemplates from '../shared/viewTemplates';
 import viewContent from '../shared/viewContent';
 
+// list of files to load (passed to the experience)
+const audioFiles = [
+  'sounds/source.wav'
+];
+
 // launch application when document is fully loaded
 const init = () => {
   // configuration received from the server through the `index.html`
@@ -17,7 +22,7 @@ const init = () => {
   soundworks.client.setViewTemplateDefinitions(viewTemplates);
 
   // create client side (player) experience
-  const experience = new PlayerExperience(assetsDomain, standalone, beaconUUID);
+  const experience = new PlayerExperience(assetsDomain, standalone, beaconUUID, audioFiles);
 
   // start the client
   soundworks.client.start();

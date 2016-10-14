@@ -1,37 +1,53 @@
 import * as soundworks from 'soundworks/client';
 import * as soundworksCordova from 'soundworks-cordova/client';
 
+import SpatSourcesHandler from './SpatSourcesHandler';
+
 const audioContext = soundworks.audioContext;
 const client = soundworks.client;
 
 const viewTemplate = `
   <canvas class="background"></canvas>
   <div class="foreground background-beacon">
+
     <div class="section-top flex-middle">
       <p class="big">Beacon ID: <%= major %>.<%= minor %></p>
     </div>
+
     <div class="section-center flex-center">
       <p class="small" id="logValues"></p>
     </div>
-    <div class="section-bottom flex-middle"></div>
+
+    <div class="section-bottom flex-middle">
+      <p id="value0" class="small"><%= 'NaN' %></p>
+      <p id="value1" class="small"><%= 'NaN' %></p>
+      <p id="value2" class="small"><%= 'NaN' %></p>      
+    </div>
+
   </div>
 `;
 
 // this experience plays a sound when it starts, and plays another sound when
 // other clients join the experience
 export default class PlayerExperience extends soundworks.Experience {
-  constructor(assetsDomain, standalone, beaconUUID) {
+  constructor(assetsDomain, standalone, beaconUUID, audioFiles) {
     super(!standalone);
     this.standalone = standalone;
 
+    // services
     this.platform = this.require('platform', { features: ['web-audio'] });
     if (!standalone) this.checkin = this.require('checkin', { showDialog: false });
-
+    this.loader = this.require('loader', { files: audioFiles });
+    this.motionInput = this.require('motion-input', { descriptors: ['deviceorientation'] });
     // beacon only work in cordova mode since it needs access right to BLE
     if (window.cordova) {
       this.beacon = this.require('beacon', { uuid: beaconUUID });
       this.beaconCallback = this.beaconCallback.bind(this);
-    }    
+    }
+
+    // bind
+    this.initBeacon = this.initBeacon.bind(this);
+
   }
 
   init() {
@@ -44,7 +60,7 @@ export default class PlayerExperience extends soundworks.Experience {
   }
 
   start() {
-    super.start(); // don't forget this
+    super.start();
 
     if (!this.hasStarted)
       this.initBeacon();
@@ -52,7 +68,25 @@ export default class PlayerExperience extends soundworks.Experience {
 
     this.show();
 
+    this.spatSourceHandler = new SpatSourcesHandler(this.loader.buffers[0]);
+
+    // setup motion input listeners
+    if (this.motionInput.isAvailable('deviceorientation')) {
+      this.motionInput.addListener('deviceorientation', (data) => {
+        // display orientation info on screen
+        document.getElementById("value0").innerHTML = Math.round(data[0]*10)/10;
+        document.getElementById("value1").innerHTML = Math.round(data[1]*10)/10;
+        document.getElementById("value2").innerHTML = Math.round(data[2]*10)/10;
+        // set audio source position
+        this.spatSourceHandler.setSourcePos(-data[0], -data[1]);
+      });
+    }
+
   }
+
+  // -------------------------------------------------------------------------------------------
+  // BEACON-RELATED METHODS
+  // -------------------------------------------------------------------------------------------
 
   initBeacon() {
 
@@ -100,5 +134,8 @@ export default class PlayerExperience extends soundworks.Experience {
              '(' + beacon.proximity + ')' + '</br></br>';
     });
     document.getElementById('logValues').innerHTML = log;
-  }  
+  }
+
+  // -------------------------------------------------------------------------------------------
+
 }
