@@ -68,7 +68,11 @@ export default class PlayerExperience extends soundworks.Experience {
 
     this.show();
 
-    this.spatSourceHandler = new SpatSourcesHandler(this.loader.buffers[0]);
+    this.spatSourceHandler = new SpatSourcesHandler(this.loader.buffers);
+    for( let i = 0; i < this.loader.buffers.length; i ++ ){
+      let initAzim = (360 / this.loader.buffers.length) * i; // equi on circle
+      this.spatSourceHandler.startSource(i, initAzim);
+    }
 
     // setup motion input listeners
     if (this.motionInput.isAvailable('deviceorientation')) {
@@ -78,7 +82,7 @@ export default class PlayerExperience extends soundworks.Experience {
         document.getElementById("value1").innerHTML = Math.round(data[1]*10)/10;
         document.getElementById("value2").innerHTML = Math.round(data[2]*10)/10;
         // set audio source position
-        this.spatSourceHandler.setSourcePos(-data[0], -data[1]);
+        this.spatSourceHandler.setListenerAim(data[0], data[1]);
       });
     }
 
