@@ -10,20 +10,27 @@ const audioContext = soundworks.audioContext;
 **/
 
 export default class SpatSourcesHandler {
-    constructor(bufferSources) {
+    constructor(bufferSources, roomReverb = false) {
+        
+        // master gain out
+        this.gainOut = audioContext.createGain();
+        this.gainOut.gain.value = 1.0;
 
         // create ambisonic decoder (common to all sources)
         this.ambisonicOrder = 3;
         this.decoder = new ambisonics.binDecoder(audioContext, this.ambisonicOrder);
 
-        // load HOA to bianural filters in decoder
-        var irUrl = "IRs/HOA3_filters_virtual.wav";
+        // load HOA to binaural filters in decoder
+        var irUrl = 'IRs/HOA3_filters_virtual.wav';
+        if( roomReverb ){
+            // different IR for reverb (+ gain adjust for iso-loudness)
+            irUrl = 'IRs/room-medium-1-furnished-src-20-Set1_16b.wav';
+            this.gainOut.gain.value *= 0.5;
+        }
+
         var loader_filters = new ambisonics.HOAloader(audioContext, this.ambisonicOrder, irUrl, (bufferIr) => { this.decoder.updateFilters(bufferIr); } );
         loader_filters.load();
         
-        // master gain out
-        this.gainOut = audioContext.createGain();
-        this.gainOut.gain.value = 1.0;
 
         // connect graph
         this.decoder.out.connect(this.gainOut);
@@ -38,7 +45,6 @@ export default class SpatSourcesHandler {
 
     // init and start spat source. id is audio buffer id in loader service
     startSource(id, initAzim = 0, initElev = 0, loop = true) {
-        console.log(id)
         
         // check for valid audio buffer
         if( this.buffers[id] === undefined ){
@@ -85,13 +91,12 @@ export default class SpatSourcesHandler {
 
     // set listener aim / orientation (i.e. move all sources around)
     setListenerAim(azim, elev = undefined){
-        console.log('up',this.listenerAimOffset);
+
         // for each spat source in local map
         this.sourceMap.forEach((spatSrc, key) => {
         
             // set new encoder azim / elev (relative to current source pos)
             spatSrc.enc.azim = spatSrc.azim - (azim - this.listenerAimOffset.azim);
-            console.log(key, spatSrc.enc.azim);
             this.lastListenerAim.azim = azim;
             if( elev !== undefined ){
                 spatSrc.enc.elev = spatSrc.elev - (elev - this.listenerAimOffset.elev);

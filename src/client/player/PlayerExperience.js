@@ -70,9 +70,11 @@ export default class PlayerExperience extends soundworks.Experience {
     this.show();
 
     // init audio source spatializer
-    this.spatSourceHandler = new SpatSourcesHandler(this.loader.buffers);
+    let roomReverb = true;
+    this.spatSourceHandler = new SpatSourcesHandler(this.loader.buffers, roomReverb);
     for( let i = 0; i < this.loader.buffers.length; i ++ ){
       let initAzim = (360 / this.loader.buffers.length) * i; // equi on circle
+      console.log(initAzim);
       this.spatSourceHandler.startSource(i, initAzim);
     }
 
