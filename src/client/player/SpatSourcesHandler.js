@@ -3,6 +3,12 @@ import * as soundworks from 'soundworks/client';
 
 const audioContext = soundworks.audioContext;
 
+/**
+* Spherical coordinate system
+* azim stands for azimuth, horizontal angle (eyes plane), 0 is facing forward, clockwise +
+* elev stands for elevation, vertical angle (mouth-nose plane), 0 is facing forward, + is up
+**/
+
 export default class SpatSourcesHandler {
     constructor(bufferSources) {
 
@@ -25,6 +31,8 @@ export default class SpatSourcesHandler {
 
         // local attributes
         this.sourceMap = new Map();
+        this.listenerAimOffset = {azim:0, elev:0};
+        this.lastListenerAim = {azim:0, elev:0};
         this.buffers = bufferSources;
     }
 
@@ -57,7 +65,7 @@ export default class SpatSourcesHandler {
         this.sourceMap.set(id, {src:src, enc:encoder, azim:initAzim, elev:initElev});
     }
 
-    // set source id pos
+    // set source id position
     setSourcePos(id, azim, elev) {
 
         // check if source has been initialized (added to local map)
@@ -76,18 +84,36 @@ export default class SpatSourcesHandler {
     }
 
     // set listener aim / orientation (i.e. move all sources around)
-    setListenerAim(azim, elev){
-
+    setListenerAim(azim, elev = undefined){
+        console.log('up',this.listenerAimOffset);
         // for each spat source in local map
         this.sourceMap.forEach((spatSrc, key) => {
         
             // set new encoder azim / elev (relative to current source pos)
-            spatSrc.enc.azim = spatSrc.azim - azim;
-            spatSrc.enc.elev = spatSrc.elev - elev;
+            spatSrc.enc.azim = spatSrc.azim - (azim - this.listenerAimOffset.azim);
+            console.log(key, spatSrc.enc.azim);
+            this.lastListenerAim.azim = azim;
+            if( elev !== undefined ){
+                spatSrc.enc.elev = spatSrc.elev - (elev - this.listenerAimOffset.elev);
+                this.lastListenerAim.elev = elev;
+            }
         
             // update encoder gains (apply azim / elev mod)
             spatSrc.enc.updateGains();
         });
+    }
+
+    // set listener aim offset (e.g. to "reset" orientation)
+    resetListenerAim(azimOnly = true){
+
+        // save new aim values
+        this.listenerAimOffset.azim = this.lastListenerAim.azim;
+        if( ! azimOnly ){
+            this.listenerAimOffset.elev = this.lastListenerAim.azim;
+        }
+
+        // update listener aim (update encoder gains, useless when player constantly stream deviceorientation data)
+        this.setListenerAim(this.lastListenerAim.azim, this.lastListenerAim.elev);
     }
 
 }

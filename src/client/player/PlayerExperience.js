@@ -62,19 +62,21 @@ export default class PlayerExperience extends soundworks.Experience {
   start() {
     super.start();
 
-    if (!this.hasStarted)
+    if (!this.hasStarted){
       this.initBeacon();
       this.init();
+    }
 
     this.show();
 
+    // init audio source spatializer
     this.spatSourceHandler = new SpatSourcesHandler(this.loader.buffers);
     for( let i = 0; i < this.loader.buffers.length; i ++ ){
       let initAzim = (360 / this.loader.buffers.length) * i; // equi on circle
       this.spatSourceHandler.startSource(i, initAzim);
     }
 
-    // setup motion input listeners
+    // setup motion input listener (update audio listener aim based on device orientation)
     if (this.motionInput.isAvailable('deviceorientation')) {
       this.motionInput.addListener('deviceorientation', (data) => {
         // display orientation info on screen
@@ -85,6 +87,14 @@ export default class PlayerExperience extends soundworks.Experience {
         this.spatSourceHandler.setListenerAim(data[0], data[1]);
       });
     }
+
+    // create touch event source referring to our view
+    const surface = new soundworks.TouchSurface(this.view.$el);
+    // setup touch listeners (reset listener orientation on touch)
+    surface.addListener('touchstart', (id, normX, normY) => {
+        // reset listener orientation (azim only)
+        this.spatSourceHandler.resetListenerAim();
+    });
 
   }
 
