@@ -14,7 +14,7 @@ export default class SpatSourcesHandler {
         
         // master gain out
         this.gainOut = audioContext.createGain();
-        this.gainOut.gain.value = 1.0;
+        this.gainOut.gain.value = 0.5;
 
         // create ambisonic decoder (common to all sources)
         this.ambisonicOrder = 3;
@@ -41,6 +41,21 @@ export default class SpatSourcesHandler {
         this.listenerAimOffset = {azim:0, elev:0};
         this.lastListenerAim = {azim:0, elev:0};
         this.buffers = bufferSources;
+    }
+
+    // start all sources
+    start(){
+        for( let i = 0; i < this.buffers.length; i ++ ){
+          let initAzim = (360 / this.buffers.length) * i; // equi on circle
+          this.startSource(i, initAzim);
+        }        
+    }
+
+    // stop all sources
+    stop(){
+        this.sourceMap.forEach((spatSrc, key) => {
+            spatSrc.src.stop();
+        });
     }
 
     // init and start spat source. id is audio buffer id in loader service

@@ -2,6 +2,7 @@ import * as soundworks from 'soundworks/client';
 import * as soundworksCordova from 'soundworks-cordova/client';
 
 import SpatSourcesHandler from './SpatSourcesHandler';
+import AmbisonicPlayer from './AmbisonicPlayer';
 
 const audioContext = soundworks.audioContext;
 const client = soundworks.client;
@@ -12,6 +13,8 @@ const viewTemplate = `
 
     <div class="section-top flex-middle">
       <p class="big">Beacon ID: <%= major %>.<%= minor %></p>
+      </br>
+      <p class="small"> shake to shift mode, touch to reset orientation</p>
     </div>
 
     <div class="section-center flex-center">
@@ -38,7 +41,7 @@ export default class PlayerExperience extends soundworks.Experience {
     this.platform = this.require('platform', { features: ['web-audio'] });
     if (!standalone) this.checkin = this.require('checkin', { showDialog: false });
     this.loader = this.require('loader', { files: audioFiles });
-    this.motionInput = this.require('motion-input', { descriptors: ['deviceorientation'] });
+    this.motionInput = this.require('motion-input', { descriptors: ['deviceorientation', 'accelerationIncludingGravity'] });
     // beacon only work in cordova mode since it needs access right to BLE
     if (window.cordova) {
       this.beacon = this.require('beacon', { uuid: beaconUUID });
@@ -47,6 +50,11 @@ export default class PlayerExperience extends soundworks.Experience {
 
     // bind
     this.initBeacon = this.initBeacon.bind(this);
+
+    // local attributes
+    this.lastShakeTime = 0.0;
+    this.audioMode = 0; // 0: mono-spat, 1: HOA file
+    // INIT AUDIOMODE AT 1 NOT SUPPORTED YET (hoa file not loaded at startup)
 
   }
 
@@ -70,13 +78,16 @@ export default class PlayerExperience extends soundworks.Experience {
     this.show();
 
     // init audio source spatializer
-    let roomReverb = true;
+    let roomReverb = false;
     this.spatSourceHandler = new SpatSourcesHandler(this.loader.buffers, roomReverb);
-    for( let i = 0; i < this.loader.buffers.length; i ++ ){
-      let initAzim = (360 / this.loader.buffers.length) * i; // equi on circle
-      console.log(initAzim);
-      this.spatSourceHandler.startSource(i, initAzim);
-    }
+
+    // init HOA player
+    this.ambisonicPlayer = new AmbisonicPlayer(roomReverb);
+
+    if( this.audioMode == 0 )
+      this.spatSourceHandler.start();
+    else
+      this.ambisonicPlayer.start();
 
     // setup motion input listener (update audio listener aim based on device orientation)
     if (this.motionInput.isAvailable('deviceorientation')) {
@@ -86,7 +97,36 @@ export default class PlayerExperience extends soundworks.Experience {
         document.getElementById("value1").innerHTML = Math.round(data[1]*10)/10;
         document.getElementById("value2").innerHTML = Math.round(data[2]*10)/10;
         // set audio source position
-        this.spatSourceHandler.setListenerAim(data[0], data[1]);
+        if( this.audioMode == 0 )
+          this.spatSourceHandler.setListenerAim(data[0], data[1]);
+        else
+          this.ambisonicPlayer.setListenerAim(data[0], data[1]);
+      });
+    }
+
+    // setup motion input listeners (shake to change listening mode)
+    if (this.motionInput.isAvailable('accelerationIncludingGravity')) {
+      this.motionInput.addListener('accelerationIncludingGravity', (data) => {
+
+          // get acceleration data
+          const mag = Math.sqrt(data[0] * data[0] + data[1] * data[1] + data[2] * data[2]);
+
+          // switch between spatialized mono sources / HOA playing on shaking (+ throttle inputs)
+          if (mag > 40 && ( (audioContext.currentTime - this.lastShakeTime) > 0.5) ){
+            // update throttle timer
+            this.lastShakeTime = audioContext.currentTime;
+            // switch mode
+            if( this.audioMode == 0 ){
+              this.audioMode = 1;
+              this.spatSourceHandler.stop();
+              this.ambisonicPlayer.start();
+            }
+            else{
+              this.audioMode = 0;
+              this.ambisonicPlayer.stop(); 
+              this.spatSourceHandler.start();
+            }
+          }
       });
     }
 
@@ -95,7 +135,10 @@ export default class PlayerExperience extends soundworks.Experience {
     // setup touch listeners (reset listener orientation on touch)
     surface.addListener('touchstart', (id, normX, normY) => {
         // reset listener orientation (azim only)
-        this.spatSourceHandler.resetListenerAim();
+        if( this.audioMode == 0 )
+          this.spatSourceHandler.resetListenerAim();
+        else
+          this.ambisonicPlayer.resetListenerAim();
     });
 
   }
