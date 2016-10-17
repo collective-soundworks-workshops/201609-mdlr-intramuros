@@ -31,8 +31,11 @@ export default class SpatSourcesHandler {
         var loader_filters = new ambisonics.HOAloader(audioContext, this.ambisonicOrder, irUrl, (bufferIr) => { this.decoder.updateFilters(bufferIr); } );
         loader_filters.load();
         
+        // rotator is used to rotate the ambisonic scene (listener aim)
+        this.rotator = new ambisonics.sceneRotator(audioContext, this.ambisonicOrder);
 
         // connect graph
+        this.rotator.out.connect(this.decoder.in);
         this.decoder.out.connect(this.gainOut);
         this.gainOut.connect(audioContext.destination);
 
@@ -77,7 +80,7 @@ export default class SpatSourcesHandler {
 
         // connect graph
         src.connect(encoder.in);
-        encoder.out.connect(this.decoder.in);
+        encoder.out.connect(this.rotator.in);
 
         // play source
         src.start(0);
@@ -104,23 +107,19 @@ export default class SpatSourcesHandler {
         }
     }
 
-    // set listener aim / orientation (i.e. move all sources around)
+    // set listener aim / orientation (i.e. rotate ambisonic field)
     setListenerAim(azim, elev = undefined){
 
-        // for each spat source in local map
-        this.sourceMap.forEach((spatSrc, key) => {
-        
-            // set new encoder azim / elev (relative to current source pos)
-            spatSrc.enc.azim = spatSrc.azim - (azim - this.listenerAimOffset.azim);
-            this.lastListenerAim.azim = azim;
-            if( elev !== undefined ){
-                spatSrc.enc.elev = spatSrc.elev - (elev - this.listenerAimOffset.elev);
-                this.lastListenerAim.elev = elev;
-            }
-        
-            // update encoder gains (apply azim / elev mod)
-            spatSrc.enc.updateGains();
-        });
+        // update rotator yaw / pitch
+        this.rotator.yaw = azim - this.listenerAimOffset.azim;
+        this.lastListenerAim.azim = azim;
+        if( elev !== undefined ){
+            this.rotator.pitch = elev - this.listenerAimOffset.elev;
+            this.lastListenerAim.elev = elev;
+        }
+
+        // update rotator coefficients (take into account new yaw / pitch)
+        this.rotator.updateRotMtx();
     }
 
     // set listener aim offset (e.g. to "reset" orientation)
