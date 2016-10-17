@@ -3,6 +3,7 @@ import * as soundworksCordova from 'soundworks-cordova/client';
 
 import SpatSourcesHandler from './SpatSourcesHandler';
 import AmbisonicPlayer from './AmbisonicPlayer';
+import PlayerRenderer from './PlayerRenderer';
 
 const audioContext = soundworks.audioContext;
 const client = soundworks.client;
@@ -66,6 +67,8 @@ export default class PlayerExperience extends soundworks.Experience {
     this.viewCtor = soundworks.CanvasView;
     this.viewOptions = { preservePixelRatio: true };
     this.view = this.createView();
+    this.renderer = new PlayerRenderer();
+    this.view.addRenderer(this.renderer);    
   }
 
   start() {
@@ -201,9 +204,19 @@ export default class PlayerExperience extends soundworks.Experience {
         // get ambisonic file id
         let dist = this.beacon.rssiToDist(beacon.rssi);
         let newAmbiFileId = this.ambiFileId;
-        if( dist < 2.0 ) newAmbiFileId = 0;
-        else if( dist > 3.0 && dist < 4.0 ) newAmbiFileId = 1;
-        else if( dist > 5.0 ) newAmbiFileId = 2;
+        let bkgColor = [0,0,0];
+        if( dist < 2.0 ){ 
+          newAmbiFileId = 0;
+          bkgColor = [0,0,100];
+        }
+        else if( dist > 3.0 && dist < 4.0 ){ 
+          newAmbiFileId = 1;
+          bkgColor = [100,0,0];
+        }
+        else if( dist > 5.0 ){ 
+          newAmbiFileId = 2;
+          bkgColor = [0,100,0];
+        }
 
         // set ambisonic file id if 1) new and 2) hysteresys
         if( (newAmbiFileId != this.ambiFileId) && 
@@ -215,6 +228,8 @@ export default class PlayerExperience extends soundworks.Experience {
           // update player
           this.ambisonicPlayer.stop();
           this.ambisonicPlayer.start( this.ambiFileId );
+          // update bkg color
+          this.renderer.setBkgColor(bkgColor);
         }
 
       }
