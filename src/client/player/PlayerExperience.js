@@ -54,6 +54,8 @@ export default class PlayerExperience extends soundworks.Experience {
     // local attributes
     this.lastShakeTime = 0.0;
     this.audioMode = 1; // 0: mono-spat, 1: HOA file
+    this.ambiFileId = 0;
+    this.lastDistHysteresisTime = 0.0;
 
   }
 
@@ -86,7 +88,7 @@ export default class PlayerExperience extends soundworks.Experience {
     if( this.audioMode == 0 )
       this.spatSourceHandler.start();
     else
-      this.ambisonicPlayer.start(1);
+      this.ambisonicPlayer.start( this.ambiFileId );
 
     // setup motion input listener (update audio listener aim based on device orientation)
     if (this.motionInput.isAvailable('deviceorientation')) {
@@ -118,7 +120,7 @@ export default class PlayerExperience extends soundworks.Experience {
             if( this.audioMode == 0 ){
               this.audioMode = 1;
               this.spatSourceHandler.stop();
-              this.ambisonicPlayer.start(2);
+              this.ambisonicPlayer.start( this.ambiFileId );
             }
             else{
               this.audioMode = 0;
@@ -165,7 +167,7 @@ export default class PlayerExperience extends soundworks.Experience {
     // INIT FAKE BEACON (for computer based debug)
     else { 
       this.beacon = {major:0, minor: client.index};
-      this.beacon.rssiToDist = function(){return 3 + 1*Math.random()};    
+      this.beacon.rssiToDist = function(){return 1.5 + 1*Math.random()};    
       window.setInterval(() => {
         var pluginResult = { beacons : [] };
         for (let i = 0; i < 4; i++) {
@@ -192,6 +194,31 @@ export default class PlayerExperience extends soundworks.Experience {
              '(' + beacon.proximity + ')' + '</br></br>';
     });
     document.getElementById('logValues').innerHTML = log;
+
+    // select current ambisonic file based on distance to beacon 0
+    pluginResult.beacons.forEach((beacon) => {
+      if( beacon.minor == 0 ){
+        // get ambisonic file id
+        let dist = this.beacon.rssiToDist(beacon.rssi);
+        let newAmbiFileId = this.ambiFileId;
+        if( dist < 2.0 ) newAmbiFileId = 0;
+        else if( dist > 3.0 && dist < 4.0 ) newAmbiFileId = 1;
+        else if( dist > 5.0 ) newAmbiFileId = 2;
+
+        // set ambisonic file id if 1) new and 2) hysteresys
+        if( (newAmbiFileId != this.ambiFileId) && 
+          (audioContext.currentTime - this.lastDistHysteresisTime) > 2.0 &&
+          (this.audioMode == 1) ){
+          // update local
+          this.lastDistHysteresisTime = audioContext.currentTime;
+          this.ambiFileId = newAmbiFileId;
+          // update player
+          this.ambisonicPlayer.stop();
+          this.ambisonicPlayer.start( this.ambiFileId );
+        }
+
+      }
+    });
   }
 
   // -------------------------------------------------------------------------------------------
