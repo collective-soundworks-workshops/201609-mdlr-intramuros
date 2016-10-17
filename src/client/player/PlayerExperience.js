@@ -53,8 +53,7 @@ export default class PlayerExperience extends soundworks.Experience {
 
     // local attributes
     this.lastShakeTime = 0.0;
-    this.audioMode = 0; // 0: mono-spat, 1: HOA file
-    // INIT AUDIOMODE AT 1 NOT SUPPORTED YET (hoa file not loaded at startup)
+    this.audioMode = 1; // 0: mono-spat, 1: HOA file
 
   }
 
@@ -87,7 +86,7 @@ export default class PlayerExperience extends soundworks.Experience {
     if( this.audioMode == 0 )
       this.spatSourceHandler.start();
     else
-      this.ambisonicPlayer.start();
+      this.ambisonicPlayer.start(1);
 
     // setup motion input listener (update audio listener aim based on device orientation)
     if (this.motionInput.isAvailable('deviceorientation')) {
@@ -119,7 +118,7 @@ export default class PlayerExperience extends soundworks.Experience {
             if( this.audioMode == 0 ){
               this.audioMode = 1;
               this.spatSourceHandler.stop();
-              this.ambisonicPlayer.start();
+              this.ambisonicPlayer.start(2);
             }
             else{
               this.audioMode = 0;

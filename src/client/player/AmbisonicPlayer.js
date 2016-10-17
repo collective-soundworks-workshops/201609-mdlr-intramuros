@@ -3,6 +3,14 @@ import * as soundworks from 'soundworks/client';
 
 const audioContext = soundworks.audioContext;
 
+// list of Ambisonic files to load
+const hoaAudioFiles = [
+    // 'sounds/HOA3_rec4.wav',
+    'sounds/BF_rec2.wav',
+    'sounds/BF_rec4.wav',
+    'sounds/BF_rec5.wav'
+];
+
 /**
 * Spherical coordinate system
 * azim stands for azimuth, horizontal angle (eyes plane), 0 is facing forward, clockwise +
@@ -32,12 +40,20 @@ export default class AmbisonicPlayer {
         });
         loader_filters.load();
 
-        // load HOA audio file
-        var soundUrl = "sounds/HOA3_rec4.wav";
-        var loader_sound = new ambisonics.HOAloader(audioContext, this.ambisonicOrder, soundUrl, (bufferSound) => { 
-            this.hoaSoundBuffer = bufferSound;
+        // load HOA audio files
+        this.hoaSoundBuffer = [];
+        hoaAudioFiles.forEach((audioFileName, audioFileIndex) => {
+            let soundUrl = audioFileName;
+            let loader_sound = new ambisonics.HOAloader(audioContext, this.ambisonicOrder, soundUrl, (bufferSound) => { 
+                this.hoaSoundBuffer[audioFileIndex] = bufferSound;
+                // catch up if a start was already requested while loading
+                if( this.bufferedStartInfo.fileId > -1 && (this.bufferedStartInfo.fileId == audioFileIndex) ){
+                    this.start(this.bufferedStartInfo.fileId, this.bufferedStartInfo.loop);
+                    this.bufferedStartInfo.fileId = -1; // reset
+                }
+            });
+            loader_sound.load();
         });
-        loader_sound.load();
 
         // rotator is used to rotate the ambisonic scene (listener aim)
         this.rotator = new ambisonics.sceneRotator(audioContext, this.ambisonicOrder);
@@ -51,20 +67,30 @@ export default class AmbisonicPlayer {
         this.listenerAimOffset = {azim:0, elev:0};
         this.lastListenerAim = {azim:0, elev:0};
         this.src = audioContext.createBufferSource();
+        this.bufferedStartInfo = {fileId:-1, loop:true};
 
     }
 
     // play audio 
-    start(loop = true) {
+    start(fileId, loop = true) {
         
-        if( this.hoaSoundBuffer === undefined ){
-            console.warn('cannot start ambisonicPlayer, still loading HOA buffer');
+        // wrong index
+        if ( (fileId < 0) || (fileId > (hoaAudioFiles.length - 1)) ){
+            console.warn('wrong file index', fileId, 'in AmbisonicPlayer');
+            return
+        }
+
+        // its too early (file not loaded yet)
+        if( this.hoaSoundBuffer[fileId] === undefined ){
+            console.warn('cannot yet start ambisonicPlayer, file:', hoaAudioFiles[fileId], 'awaiting for file to finish loading...');
+            this.bufferedStartInfo.fileId = fileId;
+            this.bufferedStartInfo.loop = loop;
             return
         }
 
         // create audio source
         this.src = audioContext.createBufferSource();
-        this.src.buffer = this.hoaSoundBuffer;
+        this.src.buffer = this.hoaSoundBuffer[fileId];
         this.src.loop = loop;
 
         // connect graph
