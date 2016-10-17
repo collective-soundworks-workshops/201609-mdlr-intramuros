@@ -17,7 +17,7 @@ export default class SpatSourcesHandler {
         this.gainOut.gain.value = 0.5;
 
         // create ambisonic decoder (common to all sources)
-        this.ambisonicOrder = 3;
+        this.ambisonicOrder = 1;
         this.decoder = new ambisonics.binDecoder(audioContext, this.ambisonicOrder);
 
         // load HOA to binaural filters in decoder
