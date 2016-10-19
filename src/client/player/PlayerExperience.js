@@ -2,11 +2,16 @@ import * as soundworks from 'soundworks/client';
 import * as soundworksCordova from 'soundworks-cordova/client';
 
 import SpatSourcesHandler from './SpatSourcesHandler';
+import AudioPlayer from './AudioPlayer';
 import AmbisonicPlayer from './AmbisonicPlayer';
 import PlayerRenderer from './PlayerRenderer';
 
 const audioContext = soundworks.audioContext;
 const client = soundworks.client;
+
+const zoneRadius = [3, 6];
+const hysteresisOffsetDist = 1;
+const hysteresisOffsetTime = 2;
 
 const viewTemplate = `
   <canvas class="background"></canvas>
@@ -53,10 +58,9 @@ export default class PlayerExperience extends soundworks.Experience {
     this.initBeacon = this.initBeacon.bind(this);
 
     // local attributes
-    this.lastShakeTime = 0.0;
-    this.audioMode = 1; // 0: mono-spat, 1: HOA file
-    this.ambiFileId = 0;
+    this.ambiFileId = -1;
     this.lastDistHysteresisTime = 0.0;
+    this.hasLoadedOnce = false;
 
   }
 
@@ -83,15 +87,13 @@ export default class PlayerExperience extends soundworks.Experience {
 
     // init audio source spatializer
     let roomReverb = false;
-    this.spatSourceHandler = new SpatSourcesHandler(this.loader.buffers, roomReverb);
+    // this.spatSourceHandler = new SpatSourcesHandler(this.loader.buffers, roomReverb);
 
     // init HOA player
     this.ambisonicPlayer = new AmbisonicPlayer(roomReverb);
+    this.audioPlayer = new AudioPlayer(this.loader.buffers);
 
-    if( this.audioMode == 0 )
-      this.spatSourceHandler.start();
-    else
-      this.ambisonicPlayer.start( this.ambiFileId );
+    // this.ambisonicPlayer.startSource( this.ambiFileId );
 
     // setup motion input listener (update audio listener aim based on device orientation)
     if (this.motionInput.isAvailable('deviceorientation')) {
@@ -101,48 +103,42 @@ export default class PlayerExperience extends soundworks.Experience {
         document.getElementById("value1").innerHTML = Math.round(data[1]*10)/10;
         document.getElementById("value2").innerHTML = Math.round(data[2]*10)/10;
         // set audio source position
-        if( this.audioMode == 0 )
-          this.spatSourceHandler.setListenerAim(data[0], data[1]);
-        else
-          this.ambisonicPlayer.setListenerAim(data[0], data[1]);
+        this.ambisonicPlayer.setListenerAim(data[0], data[1]);
       });
     }
 
-    // setup motion input listeners (shake to change listening mode)
-    if (this.motionInput.isAvailable('accelerationIncludingGravity')) {
-      this.motionInput.addListener('accelerationIncludingGravity', (data) => {
+    // // setup motion input listeners (shake to change listening mode)
+    // if (this.motionInput.isAvailable('accelerationIncludingGravity')) {
+    //   this.motionInput.addListener('accelerationIncludingGravity', (data) => {
 
-          // get acceleration data
-          const mag = Math.sqrt(data[0] * data[0] + data[1] * data[1] + data[2] * data[2]);
+    //       // get acceleration data
+    //       const mag = Math.sqrt(data[0] * data[0] + data[1] * data[1] + data[2] * data[2]);
 
-          // switch between spatialized mono sources / HOA playing on shaking (+ throttle inputs)
-          if (mag > 40 && ( (audioContext.currentTime - this.lastShakeTime) > 0.5) ){
-            // update throttle timer
-            this.lastShakeTime = audioContext.currentTime;
-            // switch mode
-            if( this.audioMode == 0 ){
-              this.audioMode = 1;
-              this.spatSourceHandler.stop();
-              this.ambisonicPlayer.start( this.ambiFileId, true, 3.0 );
-            }
-            else{
-              this.audioMode = 0;
-              this.ambisonicPlayer.stop(); 
-              this.spatSourceHandler.start();
-            }
-          }
-      });
-    }
+    //       // switch between spatialized mono sources / HOA playing on shaking (+ throttle inputs)
+    //       if (mag > 40 && ( (audioContext.currentTime - this.lastShakeTime) > 0.5) ){
+    //         // update throttle timer
+    //         this.lastShakeTime = audioContext.currentTime;
+    //         // switch mode
+    //         if( this.audioMode == 0 ){
+    //           this.audioMode = 1;
+    //           this.spatSourceHandler.stop();
+    //           this.ambisonicPlayer.startSource( this.ambiFileId, true, 0.0 );
+    //         }
+    //         else{
+    //           this.audioMode = 0;
+    //           this.ambisonicPlayer.stop(); 
+    //           this.spatSourceHandler.startAll();
+    //         }
+    //       }
+    //   });
+    // }
 
     // create touch event source referring to our view
     const surface = new soundworks.TouchSurface(this.view.$el);
     // setup touch listeners (reset listener orientation on touch)
     surface.addListener('touchstart', (id, normX, normY) => {
         // reset listener orientation (azim only)
-        if( this.audioMode == 0 )
-          this.spatSourceHandler.resetListenerAim();
-        else
-          this.ambisonicPlayer.resetListenerAim();
+        this.ambisonicPlayer.resetListenerAim();
     });
 
   }
@@ -170,7 +166,7 @@ export default class PlayerExperience extends soundworks.Experience {
     // INIT FAKE BEACON (for computer based debug)
     else { 
       this.beacon = {major:0, minor: client.index};
-      this.beacon.rssiToDist = function(){return 1.5 + 2*Math.random()};    
+      this.beacon.rssiToDist = function(){return 1.5 + 6*Math.random()};    
       window.setInterval(() => {
         var pluginResult = { beacons : [] };
         for (let i = 0; i < 4; i++) {
@@ -200,39 +196,62 @@ export default class PlayerExperience extends soundworks.Experience {
 
     // select current ambisonic file based on distance to beacon 0
     pluginResult.beacons.forEach((beacon) => {
+      
       if( beacon.minor == 0 ){
-        // get ambisonic file id
+
+        // get current zone (based on distance from beacon 0)
         let dist = this.beacon.rssiToDist(beacon.rssi);
         let newAmbiFileId = this.ambiFileId;
         let bkgColor = [0,0,0];
-        if( dist < 2.0 ){ 
+
+        if( dist <  ( zoneRadius[0] - hysteresisOffsetDist ) ){ 
           newAmbiFileId = 0;
           bkgColor = [0,0,100];
         }
-        else if( dist > 3.0 && dist < 4.0 ){ 
+        else if( dist > ( zoneRadius[0] + hysteresisOffsetDist ) && dist < ( zoneRadius[1] - hysteresisOffsetDist ) ){ 
           newAmbiFileId = 1;
           bkgColor = [100,0,0];
         }
-        else if( dist > 5.0 ){ 
+        else if( dist > ( zoneRadius[1] + hysteresisOffsetDist ) ){ 
           newAmbiFileId = 2;
           bkgColor = [0,100,0];
         }
 
+        // bypass hysteresis for first launch, start in zone 0
+        if( !this.hasLoadedOnce ){
+          this.hasLoadedOnce = true;
+          newAmbiFileId = 0;
+          bkgColor = [0,0,100];          
+        }
+
+        console.log(this.ambiFileId, newAmbiFileId);
         // set ambisonic file id if 1) new and 2) hysteresys
         if( (newAmbiFileId != this.ambiFileId) && 
-          (audioContext.currentTime - this.lastDistHysteresisTime) > 2.0 &&
-          (this.audioMode == 1) ){
+          (audioContext.currentTime - this.lastDistHysteresisTime) > hysteresisOffsetTime ){
+
+          // play transition sound
+          let transId;
+          if( this.ambiFileId == 0 && newAmbiFileId == 1 ) transId = 0;
+          // if( this.ambiFileId == 1 && newAmbiFileId == 0 ) transId = 0;
+          if( this.ambiFileId == 1 && newAmbiFileId == 2 ) transId = 1;
+          // if( this.ambiFileId == 2 && newAmbiFileId == 1 ) transId = 1;
+          if( transId !== undefined )
+            this.audioPlayer.startSource(transId, 0, false);
+
           // update local
           this.lastDistHysteresisTime = audioContext.currentTime;
           this.ambiFileId = newAmbiFileId;
+
           // update player
-          this.ambisonicPlayer.stop(-1, 3.0);
-          this.ambisonicPlayer.start( this.ambiFileId, true, 3.0 );
+          this.ambisonicPlayer.stop(-1, 1.0);
+          this.ambisonicPlayer.startSource( this.ambiFileId, true, 1.0 );
+
           // update bkg color
           this.renderer.setBkgColor(bkgColor);
-        }
 
+        }
       }
+
     });
   }
 

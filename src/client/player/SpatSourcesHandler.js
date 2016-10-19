@@ -47,22 +47,51 @@ export default class SpatSourcesHandler {
     }
 
     // start all sources
-    start(){
+    startAll(){
         for( let i = 0; i < this.buffers.length; i ++ ){
-          let initAzim = (360 / this.buffers.length) * i; // equi on circle
-          this.startSource(i, initAzim);
-        }        
+          let initAzim = (180 / this.buffers.length) * i - 90; // equi on hemi-circle
+          this.startSource(i, initAzim, 0, true, 0.0);
+        }
     }
 
     // stop all sources
-    stop(){
-        this.sourceMap.forEach((spatSrc, key) => {
-            spatSrc.src.stop();
-        });
+    stop(id = -1, fadeOutDuration = 0){
+
+        // stop all
+        if( fileId = -1 ){
+            this.sourceMap.forEach((srcObj, key) => {
+                this.stopSource(key, fadeOutDuration);
+            });
+        }
+        else{
+            this.stopSource(id, fadeOutDuration);
+        }
+    }
+
+    stopSource(id, fadeOutDuration = 0){
+
+        if( !this.sourceMap.has(id) )
+            return
+
+        // get source
+        let srcObj = this.srcMap.get(id);
+
+        // fade out
+        const param = srcObj.gain.gain;
+        const now = audioContext.currentTime;
+        param.cancelScheduledValues(now);
+        param.setValueAtTime(param.value, now);
+        param.linearRampToValueAtTime(0.0, now + fadeOutDuration);
+
+        // stop when fade out over
+        srcObj.src.stop(now + fadeOutDuration);
+
+        // remove from local
+        this.sourceMap.delete(id);        
     }
 
     // init and start spat source. id is audio buffer id in loader service
-    startSource(id, initAzim = 0, initElev = 0, loop = true) {
+    startSource(id, initAzim = 0, initElev = 0, loop = true, fadeInDuration = 0) {
         
         // check for valid audio buffer
         if( this.buffers[id] === undefined ){
@@ -74,19 +103,26 @@ export default class SpatSourcesHandler {
         var src = audioContext.createBufferSource();
         src.buffer = this.buffers[id];
         src.loop = loop;
-
+        console.log('start', fadeInDuration);
         // create encoder (source-specific to be able to set source-specific position latter)
         let encoder = new ambisonics.monoEncoder(audioContext, this.ambisonicOrder);
 
+        // create fadeIn gain
+        let gain = audioContext.createGain();
+        gain.gain.value = 0.0;
+        gain.gain.setValueAtTime(gain.gain.value, audioContext.currentTime);
+        gain.gain.linearRampToValueAtTime(1.0, audioContext.currentTime + fadeInDuration);
+
         // connect graph
-        src.connect(encoder.in);
+        src.connect(gain);
+        gain.connect(encoder.in);
         encoder.out.connect(this.rotator.in);
 
         // play source
         src.start(0);
 
         // store new spat source
-        this.sourceMap.set(id, {src:src, enc:encoder, azim:initAzim, elev:initElev});
+        this.sourceMap.set(id, {src:src, enc:encoder, gain:gain, azim:initAzim, elev:initElev});
     }
 
     // set source id position

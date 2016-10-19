@@ -6,9 +6,12 @@ const audioContext = soundworks.audioContext;
 // list of Ambisonic files to load
 const hoaAudioFiles = [
     // 'sounds/HOA3_rec4.wav',
-    'sounds/BF_rec2.wav',
-    'sounds/BF_rec4.wav',
-    'sounds/BF_rec5.wav'
+    // 'sounds/BF_rec2.wav',
+    // 'sounds/BF_rec4.wav',
+    // 'sounds/BF_rec5.wav'
+    'sounds/Hall_Ambi_01_truncated.wav',
+    'sounds/FranceInfo_Regie_Ambi_01_truncated.wav',
+    'sounds/FranceInfo_Cabine_Ambi_01_truncated.wav'
 ];
 
 /**
@@ -49,7 +52,7 @@ export default class AmbisonicPlayer {
                 // catch up if a start / some starts was / were already requested while loading
                 this.bufferedStartInfo.forEach((bufferedInfo, index)=>{
                     if( bufferedInfo.fileId == audioFileIndex ){
-                        this.start(bufferedInfo.fileId, bufferedInfo.loop, bufferedInfo.fadeInDuration);
+                        this.startSource(bufferedInfo.fileId, bufferedInfo.loop, bufferedInfo.fadeInDuration);
                         this.bufferedStartInfo.splice(index, 1); // remove from array
                     }
                 });
@@ -75,7 +78,7 @@ export default class AmbisonicPlayer {
     }
 
     // play audio 
-    start(fileId, loop = true, fadeInDuration = 0) {
+    startSource(fileId, loop = true, fadeInDuration = 0) {
         
         // wrong index
         if ( (fileId < 0) || (fileId > (hoaAudioFiles.length - 1)) ){
@@ -120,16 +123,16 @@ export default class AmbisonicPlayer {
         // stop all
         if( fileId = -1 ){
             this.srcMap.forEach((srcObj, key) => {
-                this._stop(key, fadeOutDuration);
+                this.stopSource(key, fadeOutDuration);
             });
         }
         else{
-            this._stop(fileId, fadeOutDuration);
+            this.stopSource(fileId, fadeOutDuration);
         }
 
     }
 
-    _stop(fileId, fadeOutDuration){
+    stopSource(fileId, fadeOutDuration){
         // get source
         let srcObj = this.srcMap.get(fileId);
 
