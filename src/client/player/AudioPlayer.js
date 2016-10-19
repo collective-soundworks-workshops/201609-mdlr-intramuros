@@ -27,7 +27,7 @@ export default class AudioPlayer {
             
 
         // get source
-        let srcObj = this.srcMap.get(id);
+        let srcObj = this.sourceMap.get(id);
 
         // fade out
         const param = srcObj.gain.gain;
