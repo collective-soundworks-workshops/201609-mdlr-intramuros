@@ -123,7 +123,7 @@ export default class PlayerExperience extends soundworks.Experience {
             if( this.audioMode == 0 ){
               this.audioMode = 1;
               this.spatSourceHandler.stop();
-              this.ambisonicPlayer.start( this.ambiFileId );
+              this.ambisonicPlayer.start( this.ambiFileId, true, 3.0 );
             }
             else{
               this.audioMode = 0;
@@ -170,7 +170,7 @@ export default class PlayerExperience extends soundworks.Experience {
     // INIT FAKE BEACON (for computer based debug)
     else { 
       this.beacon = {major:0, minor: client.index};
-      this.beacon.rssiToDist = function(){return 1.5 + 1*Math.random()};    
+      this.beacon.rssiToDist = function(){return 1.5 + 2*Math.random()};    
       window.setInterval(() => {
         var pluginResult = { beacons : [] };
         for (let i = 0; i < 4; i++) {
@@ -183,7 +183,7 @@ export default class PlayerExperience extends soundworks.Experience {
           pluginResult.beacons.push(beacon);
         }
         this.beaconCallback(pluginResult);
-      }, 1000);
+      }, 3000);
     }
 
   }
@@ -226,8 +226,8 @@ export default class PlayerExperience extends soundworks.Experience {
           this.lastDistHysteresisTime = audioContext.currentTime;
           this.ambiFileId = newAmbiFileId;
           // update player
-          this.ambisonicPlayer.stop();
-          this.ambisonicPlayer.start( this.ambiFileId );
+          this.ambisonicPlayer.stop(-1, 3.0);
+          this.ambisonicPlayer.start( this.ambiFileId, true, 3.0 );
           // update bkg color
           this.renderer.setBkgColor(bkgColor);
         }

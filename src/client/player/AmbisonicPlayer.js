@@ -46,11 +46,13 @@ export default class AmbisonicPlayer {
             let soundUrl = audioFileName;
             let loader_sound = new ambisonics.HOAloader(audioContext, this.ambisonicOrder, soundUrl, (bufferSound) => { 
                 this.hoaSoundBuffer[audioFileIndex] = bufferSound;
-                // catch up if a start was already requested while loading
-                if( this.bufferedStartInfo.fileId > -1 && (this.bufferedStartInfo.fileId == audioFileIndex) ){
-                    this.start(this.bufferedStartInfo.fileId, this.bufferedStartInfo.loop);
-                    this.bufferedStartInfo.fileId = -1; // reset
-                }
+                // catch up if a start / some starts was / were already requested while loading
+                this.bufferedStartInfo.forEach((bufferedInfo, index)=>{
+                    if( bufferedInfo.fileId == audioFileIndex ){
+                        this.start(bufferedInfo.fileId, bufferedInfo.loop, bufferedInfo.fadeInDuration);
+                        this.bufferedStartInfo.splice(index, 1); // remove from array
+                    }
+                });
             });
             loader_sound.load();
         });
@@ -66,13 +68,14 @@ export default class AmbisonicPlayer {
         // local attributes
         this.listenerAimOffset = {azim:0, elev:0};
         this.lastListenerAim = {azim:0, elev:0};
+        this.srcMap = new Map();
         this.src = audioContext.createBufferSource();
-        this.bufferedStartInfo = {fileId:-1, loop:true};
+        this.bufferedStartInfo = [{fileId:-1, loop:true}];
 
     }
 
     // play audio 
-    start(fileId, loop = true) {
+    start(fileId, loop = true, fadeInDuration = 0) {
         
         // wrong index
         if ( (fileId < 0) || (fileId > (hoaAudioFiles.length - 1)) ){
@@ -83,26 +86,65 @@ export default class AmbisonicPlayer {
         // its too early (file not loaded yet)
         if( this.hoaSoundBuffer[fileId] === undefined ){
             console.warn('cannot yet start ambisonicPlayer, file:', hoaAudioFiles[fileId], 'awaiting for file to finish loading...');
-            this.bufferedStartInfo.fileId = fileId;
-            this.bufferedStartInfo.loop = loop;
+            this.bufferedStartInfo.push({fileId:fileId, loop:loop, fadeInDuration:fadeInDuration});
             return
         }
 
         // create audio source
-        this.src = audioContext.createBufferSource();
-        this.src.buffer = this.hoaSoundBuffer[fileId];
-        this.src.loop = loop;
+        let src = audioContext.createBufferSource();
+        src.buffer = this.hoaSoundBuffer[fileId];
+        src.loop = loop;
+
+        // create fadeIn gain
+        let gain = audioContext.createGain();
+        gain.gain.value = 0.0;
+        // gain.gain.cancelScheduledValues(audioContext.currentTime);
+        gain.gain.setValueAtTime(gain.gain.value, audioContext.currentTime);
+        gain.gain.linearRampToValueAtTime(1.0, audioContext.currentTime + fadeInDuration);        
 
         // connect graph
-        this.src.connect(this.rotator.in);
+        src.connect(gain);
+        gain.connect(this.rotator.in);
 
         // play source
-        this.src.start(0);
+        src.start(0);
+
+        // store
+        this.srcMap.set(fileId, {src:src, gain:gain});
+
     }
 
     // stop audio
-    stop(){
-        this.src.stop();
+    stop(fileId = -1, fadeOutDuration = 0){
+
+        // stop all
+        if( fileId = -1 ){
+            this.srcMap.forEach((srcObj, key) => {
+                this._stop(key, fadeOutDuration);
+            });
+        }
+        else{
+            this._stop(fileId, fadeOutDuration);
+        }
+
+    }
+
+    _stop(fileId, fadeOutDuration){
+        // get source
+        let srcObj = this.srcMap.get(fileId);
+
+        // fade out
+        const param = srcObj.gain.gain;
+        const now = audioContext.currentTime;
+        param.cancelScheduledValues(now);
+        param.setValueAtTime(param.value, now);
+        param.linearRampToValueAtTime(0.0, now + fadeOutDuration);
+
+        // stop when fade out over
+        srcObj.src.stop(now + fadeOutDuration);
+
+        // remove from local
+        this.srcMap.delete(fileId);
     }
 
     // set listener aim / orientation
