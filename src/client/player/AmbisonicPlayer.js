@@ -9,9 +9,10 @@ const hoaAudioFiles = [
     // 'sounds/BF_rec2.wav',
     // 'sounds/BF_rec4.wav',
     // 'sounds/BF_rec5.wav'
-    'sounds/Hall_Ambi_01_truncated.wav',
+    'sounds/FranceInfo_Cabine_Ambi_01_truncated.wav',
     'sounds/FranceInfo_Regie_Ambi_01_truncated.wav',
-    'sounds/FranceInfo_Cabine_Ambi_01_truncated.wav'
+    'sounds/Hall_Ambi_01_truncated.wav',
+    'sounds/BF_rec2.wav',
 ];
 
 /**
@@ -47,6 +48,7 @@ export default class AmbisonicPlayer {
         this.hoaSoundBuffer = [];
         hoaAudioFiles.forEach((audioFileName, audioFileIndex) => {
             let soundUrl = audioFileName;
+            console.log(audioFileIndex, audioFileName);
             let loader_sound = new ambisonics.HOAloader(audioContext, this.ambisonicOrder, soundUrl, (bufferSound) => { 
                 this.hoaSoundBuffer[audioFileIndex] = bufferSound;
                 // catch up if a start / some starts was / were already requested while loading

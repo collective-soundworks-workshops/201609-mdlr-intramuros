@@ -54,7 +54,7 @@ export default {
 
   // socket.io configuration
   socketIO: {
-    url: 'http://192.168.0.1:8000', // (for cordova app: this url is soundwork server's)
+    url: 'http://169.254.98.76:8000', // (for cordova app: this url is soundwork server's)
     transports: ['websocket'],
     // @note: EngineIO defaults
     // pingTimeout: 3000,

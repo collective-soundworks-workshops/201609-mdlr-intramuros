@@ -24,3 +24,4 @@ Thumbs.db
 /apps/*/www/*
 /apps/*/plugins/*
 apps/player/
+apps/beacon/
