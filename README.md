@@ -1,4 +1,4 @@
-# Soundworks Maison de la radio - pjt1
+# Soundworks Intramuros - Cosima Workshop Maison de la radio
 
 > Part of the Maison de la radio project (workshop Cosima October 2016): A Proxomix like experience with ambisonic soundscapes. 
 > See [soundworks-template repository](https://github.com/collective-soundworks/soundworks-template) for detail on how to use the Soundworks framework.
