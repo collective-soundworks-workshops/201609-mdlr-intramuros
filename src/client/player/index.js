@@ -7,8 +7,9 @@ import viewContent from '../shared/viewContent';
 
 // list of files to load (passed to the experience)
 const audioFiles = [
-  'sounds/Transition1.wav',
-  'sounds/Transition2.wav'  
+  'sounds/TransitionHall_Regie.mp3',
+  'sounds/TransitionRegie_Cabine.mp3',
+  'sounds/TransitionHall_Concert.mp3'
 ];
 
 // launch application when document is fully loaded

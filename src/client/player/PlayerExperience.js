@@ -9,7 +9,7 @@ import PlayerRenderer from './PlayerRenderer';
 const audioContext = soundworks.audioContext;
 const client = soundworks.client;
 
-const zoneRadius = [5, 14];
+const zoneRadius = [6, 17];
 const hysteresisOffsetDist = 3;
 const hysteresisOffsetTime = 2;
 const AddedOffsetToPlayerBeaconId = 100;
@@ -260,6 +260,8 @@ export default class PlayerExperience extends soundworks.Experience {
           console.log('start', this.bonusBeaconActivated, dist2);
           // stop every other source
           this.ambisonicPlayer.stop(-1, 1.0);
+          // play transition sound
+          if(!this.bonusBeaconActivated) this.audioPlayer.startSource(2, 0, false);
           // start special sound
           this.ambisonicPlayer.startSource( 3, true, 1.0 );
           // flag special 
