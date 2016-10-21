@@ -256,7 +256,8 @@ export default class PlayerExperience extends soundworks.Experience {
       if( beacon.minor == 1 ){
         let dist2 = this.beacon.rssiToDist(beacon.rssi);
         console.log('beacon', beacon.minor);
-        if( (dist2 < 5) && !this.bonusBeaconActivated ){
+        // warning: dist2 = 0 when beacon lost line of sight for the moment
+        if( (dist2> 0.01) && (dist2 < 5) && !this.bonusBeaconActivated ){
           console.log('start', this.bonusBeaconActivated, dist2);
           // stop every other source
           this.ambisonicPlayer.stop(-1, 1.0);
