@@ -4,25 +4,11 @@ import * as soundworks from 'soundworks/client';
 const audioContext = soundworks.audioContext;
 
 // list of Ambisonic files to load
-const hoaAudioFiles = [
-    // 'sounds/HOA3_rec4.wav',
-    // 'sounds/BF_rec2.wav',
-    // 'sounds/BF_rec4.wav',
-    // 'sounds/BF_rec5.wav'
-    // 'sounds/FranceInfo_Cabine_Ambi_01_truncated.wav',
-    // 'sounds/FranceInfo_Regie_Ambi_01_truncated.wav',
-    // 'sounds/Hall_Ambi_01_truncated.wav',
-    // 'sounds/BF_rec2.wav',
-    
-    // 'sounds/Boucle_FranceInfo_Cabine_Ambi_01.wav',
-    // 'sounds/Boucle_FranceInfo_Regie_Ambi_01.wav',
-    // 'sounds/Boucle_Hall_Ambi_01.wav',
-    // 'sounds/Orchestre_Ambi_Montage10Cordes.wav',  
-
-    'sounds/Boucle_FranceInfo_Cabine_Ambi_01.mp3',
-    'sounds/Boucle_FranceInfo_Regie_Ambi_01.mp3',
-    'sounds/Boucle_Hall_Ambi_01.mp3',
-    'sounds/Orchestre_Ambi_Montage10Cordes.mp3',    
+const hoaAudioFiles = [    
+    'sounds/Boucle_FranceInfo_Cabine_Ambi_01.wav',
+    'sounds/Boucle_FranceInfo_Regie_Ambi_01.wav',
+    'sounds/Boucle_Hall_Ambi_01.wav',
+    'sounds/Orchestre_Ambi_Montage10Cordes.wav',  
 ];
 
 /**
