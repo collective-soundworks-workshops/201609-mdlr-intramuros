@@ -18,7 +18,7 @@ const hoaAudioFiles = [
 **/
 
 export default class AmbisonicPlayer {
-    constructor(roomReverb = false) {
+    constructor() {
         
         // master gain out
         this.gainOut = audioContext.createGain();
@@ -30,11 +30,6 @@ export default class AmbisonicPlayer {
 
         // load HOA to binaural filters in decoder
         var irUrl = 'IRs/HOA3_filters_virtual.wav';
-        if( roomReverb ){
-            // different IR for reverb (+ gain adjust for iso-loudness)
-            irUrl = 'IRs/room-medium-1-furnished-src-20-Set1_16b.wav';
-            this.gainOut.gain.value *= 0.5;
-        }
         var loader_filters = new ambisonics.HOAloader(audioContext, this.ambisonicOrder, irUrl, (bufferIr) => { 
             this.decoder.updateFilters(bufferIr); 
         });

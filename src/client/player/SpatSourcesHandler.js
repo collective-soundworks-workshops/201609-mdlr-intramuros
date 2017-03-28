@@ -70,8 +70,8 @@ export default class SpatSourcesHandler {
 
     stopSource(id, fadeOutDuration = 0){
 
-        if( !this.sourceMap.has(id) )
-            return
+        // discard if source does not exist
+        if( !this.sourceMap.has(id) ){ return; }
 
         // get source
         let srcObj = this.srcMap.get(id);
@@ -96,7 +96,7 @@ export default class SpatSourcesHandler {
         // check for valid audio buffer
         if( this.buffers[id] === undefined ){
             console.warn('spat source id', id, 'corresponds to empty loader.buffer, source creation aborted');
-            return
+            return;
         }
 
         // create audio source

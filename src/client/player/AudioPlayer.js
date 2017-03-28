@@ -9,8 +9,6 @@ export default class AudioPlayer {
         // master gain out
         this.gainOut = audioContext.createGain();
         this.gainOut.gain.value = 1.0;
-
-        // connect graph
         this.gainOut.connect(audioContext.destination);
 
         // local attributes
@@ -20,11 +18,11 @@ export default class AudioPlayer {
 
     stopSource(id, fadeOutDuration = 0){
 
+        // discard if source never started
         if( !this.sourceMap.has(id) ){
             console.warn('failed to stop source', id, 'in AudioPlayer (source never started)');
-            return
+            return;
         }
-            
 
         // get source
         let srcObj = this.sourceMap.get(id);
@@ -45,10 +43,10 @@ export default class AudioPlayer {
 
     // init and start spat source. id is audio buffer id in loader service
     startSource(id, fadeInDuration = 0, loop = true) {
-        
+        // check for valid buffer id
         if( this.buffers[id] == undefined ){
             console.warn('wrong file index', id, 'in AudioPlayer');
-            return
+            return;
         }
 
         // create audio source
@@ -65,8 +63,6 @@ export default class AudioPlayer {
         // connect graph
         src.connect(gain);
         gain.connect(this.gainOut);
-
-        console.log('start', id)
         
         // play source
         src.start(0);

@@ -66,7 +66,7 @@ export default class PlayerExperience extends soundworks.Experience {
   init() {
     // initialize the view
     this.viewTemplate = viewTemplate;
-    this.viewContent = { title: 'IntraMuros <br /> <br /> lvl ' + (client.index + AddedOffsetToPlayerBeaconId), 
+    this.viewContent = { title: 'IntraMuros <br /> <br /> ID ' + (client.index + AddedOffsetToPlayerBeaconId), 
                          instructions: 'search around' };
     this.viewCtor = soundworks.CanvasView;
     this.viewOptions = { preservePixelRatio: true };
@@ -85,15 +85,9 @@ export default class PlayerExperience extends soundworks.Experience {
 
     this.show();
 
-    // init audio source spatializer
-    let roomReverb = false;
-    // this.spatSourceHandler = new SpatSourcesHandler(this.loader.buffers, roomReverb);
-
-    // init HOA player
-    this.ambisonicPlayer = new AmbisonicPlayer(roomReverb);
+    // init audio players
+    this.ambisonicPlayer = new AmbisonicPlayer();
     this.audioPlayer = new AudioPlayer(this.loader.buffers);
-
-    // this.ambisonicPlayer.startSource( this.ambiFileId );
 
     // setup motion input listener (update audio listener aim based on device orientation)
     if (this.motionInput.isAvailable('deviceorientation')) {
@@ -107,35 +101,8 @@ export default class PlayerExperience extends soundworks.Experience {
       });
     }
 
-    // // setup motion input listeners (shake to change listening mode)
-    // if (this.motionInput.isAvailable('accelerationIncludingGravity')) {
-    //   this.motionInput.addListener('accelerationIncludingGravity', (data) => {
-
-    //       // get acceleration data
-    //       const mag = Math.sqrt(data[0] * data[0] + data[1] * data[1] + data[2] * data[2]);
-
-    //       // switch between spatialized mono sources / HOA playing on shaking (+ throttle inputs)
-    //       if (mag > 40 && ( (audioContext.currentTime - this.lastShakeTime) > 0.5) ){
-    //         // update throttle timer
-    //         this.lastShakeTime = audioContext.currentTime;
-    //         // switch mode
-    //         if( this.audioMode == 0 ){
-    //           this.audioMode = 1;
-    //           this.spatSourceHandler.stop();
-    //           this.ambisonicPlayer.startSource( this.ambiFileId, true, 0.0 );
-    //         }
-    //         else{
-    //           this.audioMode = 0;
-    //           this.ambisonicPlayer.stop(); 
-    //           this.spatSourceHandler.startAll();
-    //         }
-    //       }
-    //   });
-    // }
-
-    // create touch event source referring to our view
-    const surface = new soundworks.TouchSurface(this.view.$el);
     // setup touch listeners (reset listener orientation on touch)
+    const surface = new soundworks.TouchSurface(this.view.$el);
     surface.addListener('touchstart', (id, normX, normY) => {
         // reset listener orientation (azim only)
         this.ambisonicPlayer.resetListenerAim();
